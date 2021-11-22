@@ -1,0 +1,225 @@
+* {
+    box-sizing: border-box;
+  }
+  
+div.Container {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    height: 100%;
+    margin: 0px;
+    justify-content: space-between;
+}
+
+div.LeftContainer {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 60%;
+    height: 100%;
+    margin: 0px;
+    background: rgba(7, 1, 1, 0.144);
+}
+
+.LeftTopContainer {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 270px;
+    overflow-y: auto;
+    background: rgba(78, 5, 5, 0.144);
+}
+
+.LeftBottomContainer {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    bottom: 0px;
+    width: 100%;
+    z-index: 10;
+    height: calc(100% - 270px);
+    overflow-y: auto;
+    background: rgba(25, 160, 36, 0.144);
+}
+
+div.RightContainer {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: calc(40% - 10px);
+    height: 100%;
+    background: rgba(119, 4, 4, 0.144);
+}
+
+div.videoSize {
+    width: 360px;
+    height: 240px;
+}
+
+.body {
+    margin: 0px;
+    height: 100%;
+}
+
+.html {
+    margin: 0px;
+    height: 100%; 
+}
+
+.overlayUserId {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    height: 20px;
+    width: 70px;
+    z-index: 10;
+    color: red;
+    font-size: 10px;
+    background-color: white;
+}
+
+.overlayMicrophone {
+    position: absolute;
+    top: 5px;
+    right: 30px;
+    z-index: 10;
+    border-style: none; 
+    cursor: pointer;
+    background-color: white;
+}
+
+.overlayCamera {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    z-index: 10;
+    border-style: none; 
+    cursor: pointer;
+    background-color: white;
+}
+
+.overlayDisplay {
+    position: absolute;
+    top: 5px;
+    right: 50px;
+    z-index: 10;
+    border-style: none; 
+    cursor: pointer;
+    background-color: white;
+}
+
+.customBut {
+    width: 70px;
+    margin-bottom: 3px;
+}
+
+.bigBut {
+    width: 100px;
+    margin-bottom: 3px;
+}
+
+.customSelect {
+    width: 120px;
+    margin-bottom: 3px;
+    margin-left:5px;
+}
+
+video::-webkit-media-controls {
+    visibility: hidden;
+}
+
+video::-webkit-media-controls-enclosure {
+    visibility: visible;
+}
+
+
+#snackbar {
+    visibility: hidden; /* Hidden by default. Visible on click */
+    min-width: 250px; /* Set a default minimum width */
+    margin-left: -125px; /* Divide value of min-width by 2 */
+    background-color: #333; /* Black background color */
+    color: #fff; /* White text color */
+    text-align: center; /* Centered text */
+    border-radius: 2px; /* Rounded borders */
+    padding: 16px; /* Padding */
+    position: fixed; /* Sit on top of the screen */
+    z-index: 1; /* Add a z-index if needed */
+    left: 50%; /* Center the snackbar */
+    bottom: 30px; /* 30px from the bottom */
+  }
+  
+  /* Show the snackbar when clicking on a button (class added with JavaScript) */
+  #snackbar.show {
+    visibility: visible; /* Show the snackbar */
+    /* Add animation: Take 0.5 seconds to fade in and out the snackbar.
+    However, delay the fade out process for 2.5 seconds */
+    -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
+    animation: fadein 0.5s, fadeout 0.5s 2.5s;
+  }
+  
+  /* Animations to fade the snackbar in and out */
+  @-webkit-keyframes fadein {
+    from {bottom: 0; opacity: 0;}
+    to {bottom: 30px; opacity: 1;}
+  }
+  
+  @keyframes fadein {
+    from {bottom: 0; opacity: 0;}
+    to {bottom: 30px; opacity: 1;}
+  }
+  
+  @-webkit-keyframes fadeout {
+    from {bottom: 30px; opacity: 1;}
+    to {bottom: 0; opacity: 0;}
+  }
+  
+  @keyframes fadeout {
+    from {bottom: 30px; opacity: 1;}
+    to {bottom: 0; opacity: 0;}
+  }
+
+
+  @media screen and (max-width: 480px) {
+    .RightContainer {
+        display: none;
+    }
+  }
+
+  div.example {
+    background-color: yellow;
+  }
+  
+  @media screen and (max-width: 600px) {
+    div.Container {
+        flex-direction: column;
+    }
+
+    div.RightContainer {
+        /* display: none; */
+        width: 100%;
+        height: 100px;
+    }
+    div.LeftContainer {
+        width: 100%;
+    }
+    div.videoSize {
+        width: 120px;
+        height: 180px;
+    }
+    #debugView {
+        display: none;
+    }
+    /* #aryaLogView {
+        display: none;
+    } */
+  }
+
+  .beauty-box {
+    display: inline-block;
+    width: 100px;
+    margin-left: 30px;
+}

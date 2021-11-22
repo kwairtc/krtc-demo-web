@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-cn" class="html">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+        2021-11-22 18:36:00.167
+    </title>
+    <link rel="stylesheet" href="./index.css">
+    <link rel="stylesheet" href="./modal.css">
+    <link rel="stylesheet" href="css/iconfont.css">
+<script src="krtc-js-sdk.js?d901035576c810b06faf"></script></head>
+
+<body class="body">
+    <div class="Container">
+        <div id="snackbar"></div>
+        <div id="settingModal" class="modal">
+            <!-- 弹窗内容 -->
+            <div class="modal-content">
+                <div class="modal-header">
+                    <span class="close">&times;</span>
+                    <label>设置</label>
+                </div>
+                <div class="modal-body">
+                    <div style="display: flex; flex-direction: column;">
+                        <div style="margin-bottom: 5px;">
+                            <button id="getDevice" class="bigBut">get devices</button>
+                            <select name="" id="deviceKindSel" class="customSelect">
+                                <option value="all">all</option>
+                                <option value="microphone">microphone</option>
+                                <option value="speaker">speaker</option>
+                                <option value="camera">camera</option>
+                            </select>
+                        </div>
+                        <div style="margin-bottom: 5px;">
+                            <label style="width: 120px; font-size:14px">microphone</label>
+                            <select name="" id="microphones" class="customSelect"></select>
+                            <button class="customBut" id="microphoneConfirm">confirm</button>
+                        </div>
+
+                        <div style="margin-bottom: 5px;">
+                            <label style="width: 120px; font-size:14px">camera</label>
+                            <select name="" id="cameras" class="customSelect"></select>
+                            <button id="cameraConfirm" class="customBut">confirm</button>
+                        </div>
+
+                        <div style="margin-bottom: 5px;">
+                            <label style="width: 120px; font-size:14px">speaker</label>
+                            <select name="" id="speakers" class="customSelect"></select>
+                            <button id="speakerConfirm" class="customBut">confirm</button>
+                        </div>
+                        <select name="" id="videoConfigSel" style="width: 150px; margin-bottom: 3px;">
+                            <option value="vga">640x480 15fps 500kbps</option>
+                            <option value="qvga">320x240 15fps 200kbps</option>
+                            <option value="hd">1280x720 15fps 1200kbps</option>
+                        </select>
+                        <div style="display: flex; flex-direction: row;">
+                            <button id="setBitrate" class="bigBut">set bitrate</button>
+                            <input type="text" id="bitrateText" placeholder="bitrate"
+                                style="text-align:center; width:112px; margin-left: 5px;">
+                        </div>
+                        <button id="dualStream" class="bigBut">enableDual</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <div class="LeftContainer">
+            <div class="LeftTopContainer">
+                <div style="margin-bottom: 5px;padding:5px 0;border-bottom: 1px solid #000;">
+                    <label for="appId">appId:</label>
+                    <input type="text" id="appId" placeholder="输入appId" style="width:300px;margin-right:10px;">
+                    <label for="token">token:</label>
+                    <input type="text" id="token" placeholder="输入token" style="width:300px; ">
+                    <button id="confirmBtn" class="bigBut">确定</button>
+                    <button id="resetBtn" class="bigBut">重置</button>
+                </div>
+                <div style="margin-bottom: 5px;">
+                    <button id="openDevices" class="bigBut">open device</button>
+                    <button id="closeDevices" class="bigBut" style="margin-left:10px;">close device</button>
+                    <button id="getStats" class="customBut" style="margin-left:10px;">get stats</button>
+                </div>
+                <div style="margin-bottom: 5px;">
+                    <button id="initEngine" class="customBut">init</button>
+                    <button id="setting">setting</button>
+                    <label style="width: 120px; font-size:14px">openApi</label>
+                    <input type="checkbox" id="openApi" checked>
+                </div>
+                <div style="float: left; margin-bottom: 5px;">
+                    <input type="text" id="userId" placeholder="user id"
+                        style="text-align:center; width:112px; font-size:14px">
+                    <input type="text" id="channelId" placeholder="channel id"
+                        style="text-align:center; width:112px; margin-left:10px;font-size:14px">
+                    <button id="roleConfirm" class="customBut" style="display: none;">confirm</button>
+                </div>
+                <div style="margin-bottom: 5px;">
+                    <button id="join" class="customBut">join</button>
+                    <button id="leave" class="customBut" style="margin-left:10px;">leave</button>
+                    <select name="" id="roleSel" style="width: 80px; margin-bottom: 3px; margin-left:10px;">
+                        <option value="anchor">anchor</option>
+                        <option value="audience">audience</option>
+                    </select>
+                    <select name="" id="beautySel" style="width: 80px; margin-bottom: 3px; margin-left:10px;" disabled>
+                        <option value="0">关闭美颜</option>
+                        <option value="1">开启美颜</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 5px;">
+                    <button id="publish" class="customBut">publish</button>
+                    <button id="unpublish" class="customBut" style="margin-left:10px;">unpublish</button>
+                    <select name="" id="mediaTypeSel" style="width: 120px; margin-bottom: 3px;">
+                        <option value="av">audio | video</option>
+                        <option value="audio">audio</option>
+                        <option value="video">video</option>
+                        <option value="screen">screen</option>
+                        <option value="screenWithAudio">screenWithAudio</option>
+                    </select>
+                </div>
+                <div style="display: flex; flex-direction: row;">
+                    <div style="display: flex; flex-direction: column;">
+                        <button id="subscribe" class="bigBut">subscribe</button>
+                        <button id="unsubscribe" class="bigBut">unsubscribe</button>
+                    </div>
+                    <div style="display: flex; flex-direction: column; margin-left: 10px;">
+                        <label style="width: 120px; font-size:14px; margin-bottom: 3px;">remote user</label>
+                        <select name="" id="remoteUserId" style="width: 120px; margin-bottom: 3px;">
+                        </select>
+                    </div>
+                    <div style="display: flex; flex-direction: column; margin-left: 10px;">
+                        <label style="width: 120px; font-size:14px">default subscribe</label>
+                        <input type="checkbox" id="defaultSubscribe" checked>
+                    </div>
+                </div>
+                <div style="display: flex; flex-direction: row;">
+                    <button id="setRemoteVideoStreamType" class="bigBut">setStreamType</button>
+                    <select name="" id="streamTypeSel" style="width: 120px; margin-bottom: 3px; margin-left: 10px;">
+                        <option value="high">high</option>
+                        <option value="low">low</option>
+                    </select>
+                </div>
+            </div>
+            <div id="videoContainer" class="LeftBottomContainer">
+                <div class="videoSize" style="margin: 5px; position: relative;">
+                    <label id="localUserId" class="overlayUserId"></label>
+                    <span id="localMicrophone" class="iconfont icon-microphone_opened overlayMicrophone"></span>
+                    <span id="localCamera" class="iconfont icon-camera_opened overlayCamera"
+                        style="border-style: none; cursor: pointer"></span>
+                    <div id="localVideo" class="videoSize" style="background: rgba(0, 0, 0, 0.5); overflow: hidden;">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="RightContainer">
+            <div id=aryaLogView>
+                <label style="width: 120px; font-size:14px">Arya Log</label>
+                <textarea name="aryaLog" id="aryaLog"
+                    style="text-align: left; margin-bottom: 10px; resize: none;height: 300px;width: 100%;" readonly>
+                </textarea>
+            </div>
+
+            <div id="debugView">
+                <label style="width: 120px; font-size:14px">Debug Info</label>
+                <textarea name="debugInfo" id="debugInfo"
+                    style="margin-bottom: 10px; resize: none;height: 300px;width: 100%;" readonly>
+                </textarea>
+            </div>
+        </div>
+    </div>
+    <script src="./index.js"></script>
+    <script>
+        var appConntrol = new AppController();
+    </script>
+</body>
+
+</html>
