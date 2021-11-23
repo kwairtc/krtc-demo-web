@@ -33,12 +33,8 @@ var AppController = function () {
     this.channelId = null;
     this.remoteUsers = new Map();
     this.options = {
-        appId: "f67ca63c38d272261634dfa52781cc09b3767f05", //KuaishouTest
-        token: "fccd8902f805e32211d0d38d656ec70d32cfd7cc"
-    };
-    this.options = {
-        appId: "f67ca63c38d272261634dfa52781cc09b3767f05", //KuaishouTest
-        token: "fccd8902f805e32211d0d38d656ec70d32cfd7cc"
+        appId: "", //KuaishouTest
+        token: ""
     };
 
     try {
@@ -219,28 +215,28 @@ AppController.prototype.onInitEngineClicked = async function () {
     }
     this.writeAryaLog("init engine");
     this.getDevice("all");
-    let supportedCodec = await AryaRTC.getSupportedCodec();
+    let supportedCodec = await KRTC.getSupportedCodec();
     console.log(`${LogPrefix()} supporedCodec:`, supportedCodec);
     if (Array.isArray(supportedCodec.video) && supportedCodec.video.includes("H264")) {
         this.writeAryaLog("init engine system support 264");
         this.supportH264 = true;
     }
-    AryaRTC.onMicrophoneChanged = (deviceInfo) => {
+    KRTC.onMicrophoneChanged = (deviceInfo) => {
         this.writeAryaLog(`microphone state is changed label:${deviceInfo.device.label} state:${deviceInfo.state}`);
         this.onDeviceChanged(this.microphoneSelect, deviceInfo);
     };
 
-    AryaRTC.onCameraChanged = (deviceInfo) => {
+    KRTC.onCameraChanged = (deviceInfo) => {
         this.writeAryaLog(`camera state is changed label:${deviceInfo.device.label} state:${deviceInfo.state}`);
         this.onDeviceChanged(this.cameraSelect, deviceInfo);
     };
 
-    AryaRTC.onPlaybackDeviceChanged = (deviceInfo) => {
+    KRTC.onPlaybackDeviceChanged = (deviceInfo) => {
         this.writeAryaLog(`playback state is changed label:${deviceInfo.device.label} state:${deviceInfo.state}`);
         this.onDeviceChanged(this.speakerSelect, deviceInfo);
     };
 
-    AryaRTC.onDefaultSpeakerChanged = (deviceInfo) => {
+    KRTC.onDefaultSpeakerChanged = (deviceInfo) => {
         this.writeAryaLog(`default speaker state is changed label:${deviceInfo.device.label} state:${deviceInfo.state}`);
         let elementId = `${deviceInfo.device.deviceId}_${deviceInfo.device.kind}`;
         let deviceElement = document.getElementById(elementId);
@@ -262,7 +258,7 @@ AppController.prototype.onInitEngineClicked = async function () {
         }
     };
 
-    AryaRTC.onDefaultMicrophoneChanged = async (deviceInfo) => {
+    KRTC.onDefaultMicrophoneChanged = async (deviceInfo) => {
         this.writeAryaLog(`default microphone is changed label:${deviceInfo.device.label} state:${deviceInfo.state}`);
         let elementId = `${deviceInfo.device.deviceId}_${deviceInfo.device.kind}`;
         let deviceElement = document.getElementById(elementId);
@@ -283,7 +279,7 @@ AppController.prototype.onInitEngineClicked = async function () {
         }
     };
 
-    AryaRTC.onCommunicationSpeakerChanged = (deviceInfo) => {
+    KRTC.onCommunicationSpeakerChanged = (deviceInfo) => {
         this.writeAryaLog(`communication speaker is changed label:${deviceInfo.device.label} state:${deviceInfo.state}`);
         let elementId = `${deviceInfo.device.deviceId}_${deviceInfo.device.kind}`;
         let deviceElement = document.getElementById(elementId);
@@ -293,7 +289,7 @@ AppController.prototype.onInitEngineClicked = async function () {
         }
     };
 
-    AryaRTC.onCommunicationMicrophoneChanged = (deviceInfo) => {
+    KRTC.onCommunicationMicrophoneChanged = (deviceInfo) => {
         this.writeAryaLog(`communication microphone is changed label:${deviceInfo.device.label} state:${deviceInfo.state}`);
         let elementId = `${deviceInfo.device.deviceId}_${deviceInfo.device.kind}`;
         let deviceElement = document.getElementById(elementId);
@@ -303,7 +299,7 @@ AppController.prototype.onInitEngineClicked = async function () {
         }
     };
 
-    this.client = AryaRTC.createClient();
+    this.client = KRTC.createClient();
     this.inited = true;
 };
 
@@ -318,8 +314,8 @@ AppController.prototype.onChangeAppIdAndToken = function () {
 
 AppController.prototype.onResetAppIdAndToken = function () {
     this.options = {
-        appId: "f67ca63c38d272261634dfa52781cc09b3767f05", //KuaishouTest
-        token: "fccd8902f805e32211d0d38d656ec70d32cfd7cc"
+        appId: "", //KuaishouTest
+        token: ""
     };
     document.getElementById('appId').value = this.options.appId;
     document.getElementById('token').value = this.options.token;
@@ -702,16 +698,16 @@ AppController.prototype.getDevice = async function (type) {
     try {
         switch (type) {
             case "all":
-                devices = await AryaRTC.getDevices();
+                devices = await KRTC.getDevices();
                 break;
             case "microphone":
-                devices = await AryaRTC.getMicrophones();
+                devices = await KRTC.getMicrophones();
                 break;
             case "speaker":
-                devices = await AryaRTC.getPlaybackDevices();
+                devices = await KRTC.getPlaybackDevices();
                 break;
             case "camera":
-                devices = await AryaRTC.getCameras();
+                devices = await KRTC.getCameras();
                 break;
         }
         console.log(`${LogPrefix()} onGetDeviceClicked`, devices);
@@ -1091,18 +1087,18 @@ AppController.prototype.openDevice = async function () {
     console.log(`${LogPrefix()} open devices videoConfig:`, videoConfig, " audioConfig:", audioConfig);
     try {
         if (this.localAudioTrack === null && this.localVideoTrack === null) {
-            [this.localAudioTrack, this.localVideoTrack] = await AryaRTC.createMicrophoneAndCameraTracks(audioConfig, videoConfig);
+            [this.localAudioTrack, this.localVideoTrack] = await KRTC.createMicrophoneAndCameraTracks(audioConfig, videoConfig);
             // this.localAudioTrack.play();
             this.localVideoTrack.play(this.localVideoView, { mirror: true });
             this.beautySelect.removeAttribute('disabled')
         } else {
             if (this.localAudioTrack === null) {
-                this.localAudioTrack = await AryaRTC.createMicrophoneAudioTrack(audioConfig);
+                this.localAudioTrack = await KRTC.createMicrophoneAudioTrack(audioConfig);
                 // this.localAudioTrack.play();
             }
 
             if (this.localVideoTrack === null) {
-                this.localVideoTrack = await AryaRTC.createCameraVideoTrack(videoConfig);
+                this.localVideoTrack = await KRTC.createCameraVideoTrack(videoConfig);
                 this.localVideoTrack.play(this.localVideoView, { mirror: true });
                 this.beautySelect.removeAttribute('disabled')
             }
@@ -1127,11 +1123,11 @@ AppController.prototype.createScreenTrack = async function () {
     try {
         let mediaType = this.mediaTypeSelect.value;
         if (mediaType === 'screen') {
-            this.localScreenVideoTrack = await AryaRTC.createScreenVideoTrack({ encoderConfig: videoEncodeConfig, optimizationMode: "detail" }, false);
-            // this.localScreenVideoTrack =  await AryaRTC.createScreenVideoTrack({encoderConfig:videoEncodeConfig}, false);
+            this.localScreenVideoTrack = await KRTC.createScreenVideoTrack({ encoderConfig: videoEncodeConfig, optimizationMode: "detail" }, false);
+            // this.localScreenVideoTrack =  await KRTC.createScreenVideoTrack({encoderConfig:videoEncodeConfig}, false);
             this.localScreenVideoTrack.on("track-ended", this.onTrackEnded);
         } else if (mediaType === "screenWithAudio") {
-            [this.localAudioTrack, this.localScreenVideoTrack] = await AryaRTC.createScreenVideoTrack({ encoderConfig: videoEncodeConfig }, true);
+            [this.localAudioTrack, this.localScreenVideoTrack] = await KRTC.createScreenVideoTrack({ encoderConfig: videoEncodeConfig }, true);
             this.localScreenVideoTrack.on("track-ended", this.onTrackEnded);
         }
         this.addScreenDisplayElement();
