@@ -7,7 +7,7 @@
 KRTC Web SDK 支持市面上主流浏览器。chrome、safari、Edge、firefox
 
 #### krtc能力检测
-[krtc能力检测](https://web-sdk.kuaishou.com/krtc/webrtc/demo/krtc/index.html)
+[krtc能力检测](https://web-sdk.kuaishou.com/detect.html)
 
 ## 示例项目（demo）
 
