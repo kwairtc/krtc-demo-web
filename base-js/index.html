@@ -5,12 +5,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>
-        2021-11-22 18:36:00.167
+        2022-02-23 17:36:54.61
     </title>
     <link rel="stylesheet" href="./index.css">
     <link rel="stylesheet" href="./modal.css">
     <link rel="stylesheet" href="css/iconfont.css">
-<script src="krtc-js-sdk.js?d901035576c810b06faf"></script></head>
+<script src="krtc-js-sdk.js?b57d7639f3e6f32de300"></script></head>
 
 <body class="body">
     <div class="Container">
@@ -50,17 +50,34 @@
                             <select name="" id="speakers" class="customSelect"></select>
                             <button id="speakerConfirm" class="customBut">confirm</button>
                         </div>
-                        <select name="" id="videoConfigSel" style="width: 150px; margin-bottom: 3px;">
-                            <option value="vga">640x480 15fps 500kbps</option>
-                            <option value="qvga">320x240 15fps 200kbps</option>
-                            <option value="hd">1280x720 15fps 1200kbps</option>
-                        </select>
+                        <div style="display: flex; flex-direction: row;">
+                            <select name="" id="videoConfigSel" style="width: 150px; margin-bottom: 3px;">
+                                <option value="vga">640x480 15fps 1000kbps</option>
+                                <option value="vga1">640x480 15fps 800kbps</option>
+                                <option value="qvga">320x240 15fps 200kbps</option>
+                                <option value="hd">1280x720 15fps 1200kbps</option>
+                            </select>
+                            <select name="" id="codecSel" style="width: 100px; margin-bottom: 3px; margin-left: 3px;">
+                                <option value="H264">H264</option>
+                                <option value="VP8">VP8</option>
+                            </select>
+                        </div>
                         <div style="display: flex; flex-direction: row;">
                             <button id="setBitrate" class="bigBut">set bitrate</button>
                             <input type="text" id="bitrateText" placeholder="bitrate"
                                 style="text-align:center; width:112px; margin-left: 5px;">
                         </div>
                         <button id="dualStream" class="bigBut">enableDual</button>
+                        <div style="display: flex; flex-direction: row;">
+                            <button id="setliveTranscoding" style="width: 150px;margin-bottom: 3px;">set live transcoding</button>
+                        </div>
+                        <div style="display: flex; flex-direction: row;">
+                            <button id="liveStreaming" class="bigBut">start live</button>
+                            <input type="text" id="streamUrl" placeholder="rtmp url"
+                                style="text-align:center; width:112px; margin-left: 5px;">
+                            <label style="width: 75px; font-size:14px;text-align:center;">transcode</label>
+                            <input type="checkbox" id="transcode">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -86,6 +103,8 @@
                     <button id="setting">setting</button>
                     <label style="width: 120px; font-size:14px">openApi</label>
                     <input type="checkbox" id="openApi" checked>
+                    <label style="width: 120px; font-size:14px">activeTrack</label>
+                    <input type="checkbox" id="activeTrack">
                 </div>
                 <div style="float: left; margin-bottom: 5px;">
                     <input type="text" id="userId" placeholder="user id"
@@ -139,6 +158,10 @@
                         <option value="low">low</option>
                     </select>
                 </div>
+                <div style="display: flex; flex-direction: row;">
+                    <button id="muteAudio" style="margin-right: 10px;" class="bigBut">muteAudio</button>
+                    <button id="unmuteAudio" class="bigBut">unmuteAudio</button>
+                </div>
             </div>
             <div id="videoContainer" class="LeftBottomContainer">
                 <div class="videoSize" style="margin: 5px; position: relative;">
@@ -162,7 +185,7 @@
             <div id="debugView">
                 <label style="width: 120px; font-size:14px">Debug Info</label>
                 <textarea name="debugInfo" id="debugInfo"
-                    style="margin-bottom: 10px; resize: none;height: 300px;width: 100%;" readonly>
+                    style="margin-bottom: 10px; resize: none;height: 300px;width: 100%;">
                 </textarea>
             </div>
         </div>

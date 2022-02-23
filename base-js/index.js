@@ -1,3 +1,4 @@
+// KRTC.enbaleLogDebug(false)
 function getLocaltime() {
     return (new Date()).Format("yyyy-MM-dd hh:mm:ss.S");
 };
@@ -22,6 +23,33 @@ const LogPrefix = () => {
     return `[${getLocaltime()}] [AppController]`;
 };
 
+class AWaitLock {
+    constructor(name) {
+        this.name = name;
+        this.lockQueue = [];
+        this.locked = false;
+    }
+ 
+    async lock() {
+        if (this.locked) {
+            let that = this;
+            await new Promise((resolve) => {
+                that.lockQueue.push(resolve);
+            });
+        }
+        this.locked = true;
+        return true;
+    }
+ 
+    unlock() {
+        this.locked = false;
+        let resolve = this.lockQueue.shift();
+        if (resolve) {
+            resolve();
+        }
+    }
+ }
+
 var AppController = function () {
     console.log(`${LogPrefix()} init ${document.getElementsByTagName("title")[0].innerHTML}`);
     this.localMediaStream = null;
@@ -33,8 +61,8 @@ var AppController = function () {
     this.channelId = null;
     this.remoteUsers = new Map();
     this.options = {
-        appId: "", //KuaishouTest
-        token: ""
+        appId: "f67ca63c38d272261634dfa52781cc09b3767f05", //KuaishouTest
+        token: "fccd8902f805e32211d0d38d656ec70d32cfd7cc"
     };
 
     try {
@@ -55,6 +83,13 @@ var AppController = function () {
             height: 480,
             frameRate: 15,
             bitrateMax: 1000,
+            bitrateMin: 100
+        }],
+        ["vga1", {
+            width: 640,
+            height: 480,
+            frameRate: 15,
+            bitrateMax: 800,
             bitrateMin: 100
         }],
         ["qvga", {
@@ -85,6 +120,7 @@ var AppController = function () {
     this.roleSelect = document.getElementById("roleSel");
     this.streamTypeSel = document.getElementById("streamTypeSel");
     this.beautySelect = document.getElementById("beautySel");
+    this.codecSel = document.getElementById("codecSel");
 
 
     this.initEngineButton = document.getElementById("initEngine");
@@ -100,15 +136,27 @@ var AppController = function () {
     this.getStatsButton = document.getElementById("getStats");
     this.dualStreamButton = document.getElementById("dualStream");
     this.setRemoteVideoStreamTypeButton = document.getElementById("setRemoteVideoStreamType");
+    this.muteAudioButton = document.getElementById("muteAudio");
+    this.unmuteAudioButton = document.getElementById("unmuteAudio");
 
     this.microphoneConfirmButton = document.getElementById("microphoneConfirm");
     this.cameraConfirmButton = document.getElementById("cameraConfirm");
     this.speackerConfirmButton = document.getElementById("speakerConfirm");
     this.settingButton = document.getElementById("setting");
 
+    this.setLiveTranscodingButton = document.getElementById("setliveTranscoding");
+    this.liveStreaming = document.getElementById("liveStreaming");
+    this.transcodeCheckbox = document.getElementById("transcode");
+
     this.microphoneConfirmButton.onclick = this.onMicrophoneConfirmClicked.bind(this);
     this.cameraConfirmButton.onclick = this.onCameraConfirmClicked.bind(this);
     this.speackerConfirmButton.onclick = this.onSpeakerConfirmClicked.bind(this);
+
+    this.setLiveTranscodingButton.onclick = this.onSetLiveTranscodingClicked.bind(this);
+    this.liveStreaming.onclick = this.onLiveStreamingClicked.bind(this);
+
+    this.muteAudioButton.onclick = this.onMuteAudioClicked.bind(this);
+    this.unmuteAudioButton.onclick = this.onUnmuteAudioClicked.bind(this);
 
     this.settingModal = document.getElementById('settingModal');
     this.closeSpan = document.getElementsByClassName("close")[0];
@@ -126,6 +174,7 @@ var AppController = function () {
 
     this.roleSelect.onchange = this.onRoleSelectChanged.bind(this);
     this.beautySelect.onchange = this.onBeautySelectChanged.bind(this);
+    this.videoConfigSelect.onchange = this.onVideoEncodeProfileChange.bind(this);
 
 
     this.localUserIdLabel = document.getElementById("localUserId");
@@ -162,6 +211,7 @@ var AppController = function () {
 
     this.localUserIdInput = document.getElementById("userId");
     this.channelIdInput = document.getElementById("channelId");
+    this.streamUrlInput = document.getElementById('streamUrl');
 
 
 
@@ -173,6 +223,7 @@ var AppController = function () {
 
     this.defaultSubscribeCheckBox = document.getElementById("defaultSubscribe");
     this.openApiCheckBox = document.getElementById("openApi");
+    this.activeTrackCheckBox = document.getElementById("activeTrack");
 
     this.initEngineButton.onclick = this.onInitEngineClicked.bind(this);
     this.joinButton.onclick = this.onJoinClicked.bind(this);
@@ -196,6 +247,8 @@ var AppController = function () {
     this.onContentUnpublish = this.onContentUnpublish_.bind(this);
     this.onContentKickOff = this.onContentKickedOff_.bind(this);
     this.onTrackEnded = this.onTrackEnded_.bind(this);
+    this.onActiveTrack = this.onActiveTrack_.bind(this);
+    this.openDeviceMutex = new AWaitLock('openDevice');
     this.writeAryaLog(`init appcontroler done time:${document.getElementsByTagName("title")[0].innerHTML}`);
 };
 
@@ -216,6 +269,7 @@ AppController.prototype.onInitEngineClicked = async function () {
     this.writeAryaLog("init engine");
     this.getDevice("all");
     let supportedCodec = await KRTC.getSupportedCodec();
+    this.isJoining = false;
     console.log(`${LogPrefix()} supporedCodec:`, supportedCodec);
     if (Array.isArray(supportedCodec.video) && supportedCodec.video.includes("H264")) {
         this.writeAryaLog("init engine system support 264");
@@ -236,7 +290,7 @@ AppController.prototype.onInitEngineClicked = async function () {
         this.onDeviceChanged(this.speakerSelect, deviceInfo);
     };
 
-    KRTC.onDefaultSpeakerChanged = (deviceInfo) => {
+    KRTC.onDefaultSpeakerChanged = async (deviceInfo) => {
         this.writeAryaLog(`default speaker state is changed label:${deviceInfo.device.label} state:${deviceInfo.state}`);
         let elementId = `${deviceInfo.device.deviceId}_${deviceInfo.device.kind}`;
         let deviceElement = document.getElementById(elementId);
@@ -252,6 +306,22 @@ AppController.prototype.onInitEngineClicked = async function () {
                         }
                     }
                 });
+                if (this.activeTrack) {
+                    try {
+                        await this.activeTrack.setPlaybackDevice(this.speakerSelect.value);
+                        console.log(`${LogPrefix()} onDefaultSpeakerChanged activeTrack setPlaybackDevice success`);
+                    } catch (error) {
+                        console.log(`${LogPrefix()} onDefaultSpeakerChanged activeTrack setPlaybackDevice failed error:${error}`);
+                    }
+                }
+                if (this.contentAudioTrack) {
+                    try {
+                        await this.contentAudioTrack.setPlaybackDevice(this.speakerSelect.value);
+                        console.log(`${LogPrefix()} onDefaultSpeakerChanged contentAudioTrack setPlaybackDevice success`);
+                    } catch (error) {
+                        console.log(`${LogPrefix()} onDefaultSpeakerChanged contentAudioTrack setPlaybackDevice failed error:${error}`);
+                    }
+                }
             }
             deviceElement.value = deviceInfo.device.deviceId;
             deviceElement.innerHTML = deviceInfo.device.label;
@@ -299,7 +369,18 @@ AppController.prototype.onInitEngineClicked = async function () {
         }
     };
 
-    this.client = KRTC.createClient();
+    let deviceId = KRTC.getDeviceId();
+    this.client = KRTC.createClient({
+        enableActiveTrack: this.activeTrackCheckBox.checked,
+        codec: this.codecSel.value,
+        deviceId: deviceId
+    });
+    // this.client.enableAudioVolumeIndicator();
+    // this.client.on("volume-indicator", volumes => {
+    //     volumes.forEach((volume, index) => {
+    //         console.log(`${index} UID ${volume.uid} Level ${volume.level}`);
+    //     });
+    // })
     this.inited = true;
 };
 
@@ -308,14 +389,14 @@ AppController.prototype.onChangeAppIdAndToken = function () {
         appId: document.getElementById('appId').value, //KuaishouTest
         token: document.getElementById('token').value
     };
-    
+
     localStorage.setItem('appConfig', JSON.stringify(this.options))
 };
 
 AppController.prototype.onResetAppIdAndToken = function () {
     this.options = {
-        appId: "", //KuaishouTest
-        token: ""
+        appId: "f67ca63c38d272261634dfa52781cc09b3767f05", //KuaishouTest
+        token: "fccd8902f805e32211d0d38d656ec70d32cfd7cc"
     };
     document.getElementById('appId').value = this.options.appId;
     document.getElementById('token').value = this.options.token;
@@ -351,8 +432,14 @@ AppController.prototype.closeDevice = function () {
         this.localScreenVideoTrack.close();
         this.localScreenVideoTrack = null;
     }
+    if (this.localScreenAudioTrack) {
+        this.localScreenAudioTrack.close();
+        this.localScreenAudioTrack = null;
+    }
     this.localCameraSpan.className = "iconfont icon-camera_opened overlayCamera";
     this.localMicrophoneSpan.className = "iconfont icon-microphone_opened overlayMicrophone";
+    this.activeTrack = null;
+    this.activeTrackTimerId && clearInterval(this.activeTrackTimerId);
     console.log(`${LogPrefix()} close devices end`);
 };
 
@@ -371,8 +458,14 @@ AppController.prototype.onJoinClicked = function () {
         this.showToast(`invaild userId:${this.localUserIdInput.value} or channelId:${this.channelIdInput.value}`, 1000);
         return;
     }
-    if (this.isJoined) {
-        this.showToast(`user has joined`, 1000);
+    
+    if (this.isJoining) {
+        this.showToast(`user has joined or is joining`, 1000);
+        return;
+    }
+    this.isJoining = true;
+    if (!this.options.appId || !this.options.token) {
+        this.showToast(`app id or token is empty`, 1000);
         return;
     }
     this.localUserId = this.localUserIdInput.value;
@@ -394,19 +487,32 @@ AppController.prototype.onJoinClicked = function () {
         this.writeAryaLog(`userId:${this.localUserId} join channel:${this.channelId} fail ${err}`);
         this.showToast(`${this.localUserId} join channel:${this.channelId} fail`, 1000);
     });
+    this.client.on("active-track", this.onActiveTrack);
+    this.client.on("error", (event) => {
+        this.showToast(event.msg, 1000);
+    });
+    // window.onbeforeunload = async (event) => {
+    //     try {
+    //         if (this.isJoined) {
+    //             await this.leave();
+    //         }
+    //     } catch (error) {
+    //     }
+    // };
 };
 
 AppController.prototype.onLeaveClicked = async function () {
-    console.log(`${LogPrefix()} OnLeaveClicked", "userid:`, this.localUserId, "channel id:", this.channelId);
+    console.log(`${LogPrefix()} OnLeaveClicked", "userid:`, this.localUserId, "channel id:", this.channelId, "is join:", this.isJoining);
     if (this.localUserIdInput.value !== this.localUserId || this.channelId !== this.channelIdInput.value) {
         this.showToast(`invaild userid:${this.localUserIdInput.value} channelId:${this.channelIdInput.value}`, 1000);
         return;
     }
-    if (!this.isJoined) {
+    if (!this.isJoining) {
         this.showToast(`user has not joined`, 1000);
         return;
     }
     try {
+        this.isJoining = false;
         await this.client.leave();
         this.writeAryaLog(`user:${this.localUserId} leave channel:${this.channelId} success`);
         this.showToast(`${this.localUserId} leave channel:${this.channelId} success`, 1000);
@@ -423,7 +529,7 @@ AppController.prototype.onLeaveClicked = async function () {
 
 AppController.prototype.onConnectionStateChange_ = function (curState, revState, reason) {
     this.writeAryaLog(`onConnectionStateChange curState:${curState} revState:${revState} reason:${reason}`);
-    if (curState === "DISCONNECTED" && reason === "UID_BANNED") {
+    if (curState === "disconnected" && reason === "uid_banned") {
         this.stop();
         this.showToast(`${this.localUserId} is kicked out`, 1000);
     }
@@ -445,8 +551,6 @@ AppController.prototype.onPublishClicked = async function () {
     let mediaType = this.mediaTypeSelect.value;
     if (!this.supportH264 && (mediaType === "av" || mediaType === "video")) {
         this.writeAryaLog(`publish failed because system can not support h264`);
-        this.showToast(`publish fail because system can not support h264`, 1000);
-        return;
     }
     let tracks = null;
     try {
@@ -473,8 +577,7 @@ AppController.prototype.onPublishClicked = async function () {
                 tracks = this.localScreenVideoTrack;
                 break;
             case "screenWithAudio":
-                await this.createScreenTrack();
-                tracks = [this.localScreenAudioTrack, this.localScreenVideoTrack];
+                tracks = await this.createScreenTrack();
                 break;
         }
     } catch (error) {
@@ -512,22 +615,31 @@ AppController.prototype.onUnpublishClicked = function () {
             this.localScreenVideoTrack && this.localScreenVideoTrack.close();
             break;
         case "screenWithAudio":
-            tracks = [this.localScreenAudioTrack, this.localScreenVideoTrack];
-            this.localScreenVideoTrack && this.localScreenVideoTrack.close();
-            this.localAudioTrack.close();
+            tracks = [];
+            if (this.localScreenAudioTrack) {
+                tracks.push(this.localScreenAudioTrack);
+                this.localScreenAudioTrack.close();
+            }
+            if (this.localScreenVideoTrack) {
+                tracks.push(this.localScreenVideoTrack);
+                this.localScreenVideoTrack.close();
+            }
             break;
     }
     this.client.unpublish(tracks).then(() => {
         this.writeAryaLog(`unpublish ${mediaType} track success`);
 
     }).catch((err) => this.writeAryaLog(`unpublish ${mediaType} track fail err:${err}`));
-    if (mediaType === "screen") {
+    if (mediaType === "screen" || mediaType === "screenWithAudio") {
         this.removeScreenDisplayElement();
         if (this.localScreenVideoTrack) {
             this.localScreenVideoTrack.off("track-ended", this.onTrackEnded);
             this.localScreenVideoTrack = null;
         }
-    } else if (mediaType === "screenWithAudio") {
+        if (this.localScreenAudioTrack) {
+            this.localScreenAudioTrack.off("track-ended", this.onTrackEnded);
+            this.localScreenAudioTrack = null;
+        }
     }
 };
 
@@ -600,12 +712,13 @@ AppController.prototype.onSpeakerConfirmClicked = async function () {
         return;
     }
     let selectedIndex = this.speakerSelect.selectedIndex;
-    console.log(`${LogPrefix()} onSpeakerConfirmClicked label:${this.speakerSelect.options[selectedIndex].text}`);
+    let deviceId = this.speakerSelect.options[selectedIndex].value;
+    console.log(`${LogPrefix()} onSpeakerConfirmClicked label:${this.speakerSelect.options[selectedIndex].text}, ${deviceId}`);
     if (this.speakerSelect.value !== undefined) {
         this.remoteUsers.forEach(async (remoteUser) => {
             if (remoteUser.audioTrack !== undefined) {
                 try {
-                    await remoteUser.audioTrack.setPlaybackDevice(this.speakerSelect.value);
+                    await remoteUser.audioTrack.setPlaybackDevice(deviceId);
                     console.log(`${LogPrefix()} onSpeakerConfirmClicked setPlaybackDevice success user:${remoteUser.uid}`);
                 } catch (error) {
                     console.log(`${LogPrefix()} onSpeakerConfirmClicked setPlaybackDevice failed error:${error} user:${remoteUser.uid}`);
@@ -614,10 +727,16 @@ AppController.prototype.onSpeakerConfirmClicked = async function () {
         });
         if (this.localAudioTrack) {
             try {
-                await this.localAudioTrack.setPlaybackDevice(this.speakerSelect.value);
+                await this.localAudioTrack.setPlaybackDevice(deviceId);
             } catch (error) {
                 console.log(`${LogPrefix()} onSpeakerConfirmClicked setPlaybackDevice fail to set playback device for local audio track error:${error}`);
             }
+        }
+        if (this.activeTrack) {
+            this.activeTrack.setPlaybackDevice(deviceId);
+        }
+        if (this.contentAudioTrack) {
+            this.contentAudioTrack.setPlaybackDevice(deviceId);
         }
     }
 };
@@ -680,7 +799,7 @@ AppController.prototype.onBeautySelectChanged = async function (event) {
         this.showToast(`open camera before set client beatutyEffect`, 2000);
         return;
     }
-    var isOn = event.target.value === '1'
+    var isOn = event.target.value === '1';
     try {
         await this.localVideoTrack.setBeautyEffect(isOn);
         this.writeAryaLog(`${isOn ? 'open' : 'close'} beautyEffect success`);
@@ -806,7 +925,8 @@ AppController.prototype.onContentPublish_ = function (track, mediaType) {
     this.writeAryaLog(`onContentPublish user:${track.getUserId()} mediaType:${mediaType}`);
     console.log(`${LogPrefix()} onContentPublish userId`, track.getUserId(), " mediaType:", mediaType);
     if (mediaType === "audio") {
-        track.play();
+        this.contentAudioTrack = track;
+        this.contentAudioTrack.play();
     } else {
         this.addRemoteVideoTrack(track);
     }
@@ -818,10 +938,13 @@ AppController.prototype.onContentUnpublish_ = function (userId, mediaType) {
     if (mediaType === "video") {
         this.removeRemoteVideoTrack(userId, "content");
     }
+    if (mediaType === "audio") {
+        this.contentAudioTrack = undefined;
+    }
 };
 
-AppController.prototype.onContentKickedOff_ = function () {
-    this.writeAryaLog(`onContentKickedOff`);
+AppController.prototype.onContentKickedOff_ = function (reason) {
+    this.writeAryaLog(`onContentKickedOff reason:${reason}`);
     console.log(`${LogPrefix()} onContentKickedOff`, this.localScreenVideoTrack);
     if (this.localScreenAudioTrack) {
         this.localScreenAudioTrack.close();
@@ -849,6 +972,27 @@ AppController.prototype.onTrackEnded_ = async function (mediaType, sourceType, t
             this.localScreenVideoTrack = null;
         }
     }
+    if (mediaType === 'audio' && sourceType === "content") {
+        if (this.localScreenAudioTrack) {
+            try {
+                await this.client.unpublish(this.localScreenAudioTrack);
+            } catch (error) {
+                console.log(`${LogPrefix()} onTrackEnded fail to unpublish track`);
+            }
+            this.localScreenAudioTrack.close();
+            this.localScreenVideoTrack = null;
+        }
+    }
+};
+
+AppController.prototype.onActiveTrack_ = function (activeTrack) {
+    console.log(`${LogPrefix()} onActiveTrack`, activeTrack);
+    this.activeTrack = activeTrack;
+    this.activeTrack.play();
+    this.activeTrackTimerId = setInterval(() => {
+        let volumes = this.activeTrack.getVolumeLevels();
+        console.log(`${LogPrefix()} onActiveTrack volumes`, volumes);
+    }, 2000);
 };
 
 AppController.prototype.addRemoteVideoTrack = function (videoTrack) {
@@ -1056,6 +1200,7 @@ AppController.prototype.stop = function () {
     this.client.off("connection-state-change", this.onConnectionStateChange);
     this.client.off("content-published", this.onContentPublish);
     this.client.off("content-unpublished", this.onContentUnpublish);
+    this.client.off("active-track", this.onActiveTrack);
     if (this.localAudioTrack && this.localAudioTrack.isPlaying) {
         this.localAudioTrack.close();
     }
@@ -1069,10 +1214,12 @@ AppController.prototype.stop = function () {
     });
     this.remoteUsers.clear();
     this.isJoined = false;
+    this.liveStreaming.innerHTML = "start live";
 };
 
 AppController.prototype.openDevice = async function () {
     console.log(`${LogPrefix()} open devices, camera:${this.cameraSelect.value} microphone:${this.microphoneSelect.value}`);
+    await this.openDeviceMutex.lock();
     let videoEncoderConfig = this.videoEncoderConfigs.get(this.videoConfigSelect.value);
     let videoConfig = {
         encoderConfig: videoEncoderConfig,
@@ -1089,8 +1236,12 @@ AppController.prototype.openDevice = async function () {
         if (this.localAudioTrack === null && this.localVideoTrack === null) {
             [this.localAudioTrack, this.localVideoTrack] = await KRTC.createMicrophoneAndCameraTracks(audioConfig, videoConfig);
             // this.localAudioTrack.play();
+            if (this.beautySelect.value === "1") {
+                await this.localVideoTrack.setBeautyEffect(true);
+            }
             this.localVideoTrack.play(this.localVideoView, { mirror: true });
-            this.beautySelect.removeAttribute('disabled')
+            this.localVideoTrack.setOptimizationMode('motion');
+            this.beautySelect.removeAttribute('disabled');
         } else {
             if (this.localAudioTrack === null) {
                 this.localAudioTrack = await KRTC.createMicrophoneAudioTrack(audioConfig);
@@ -1099,41 +1250,61 @@ AppController.prototype.openDevice = async function () {
 
             if (this.localVideoTrack === null) {
                 this.localVideoTrack = await KRTC.createCameraVideoTrack(videoConfig);
+                if (this.beautySelect.value === "1") {
+                    await this.localVideoTrack.setBeautyEffect(true);
+                }
+                this.localVideoTrack.setOptimizationMode('motion');
                 this.localVideoTrack.play(this.localVideoView, { mirror: true });
-                this.beautySelect.removeAttribute('disabled')
+                this.beautySelect.removeAttribute('disabled');
             }
         }
     } catch (error) {
         console.log(`${LogPrefix()} openDevice error`);
+        this.openDeviceMutex.unlock();
         throw error;
     }
+    this.openDeviceMutex.unlock();
 };
 
 AppController.prototype.createScreenTrack = async function () {
+    await this.openDeviceMutex.lock();
     if (this.localScreenVideoTrack) {
         throw "screen track has been created";
     }
     let videoEncodeConfig = {
-        width: 1920,
-        height: 1080,
-        frameRate: 5,
-        bitrateMax: 2000,
-        bitrateMin: 200
+        width: 2560,
+        height: 1440,
+        // frameRate: 15,
+        // bitrateMax: 2000,
+        // bitrateMin: 600
     };
     try {
         let mediaType = this.mediaTypeSelect.value;
         if (mediaType === 'screen') {
-            this.localScreenVideoTrack = await KRTC.createScreenVideoTrack({ encoderConfig: videoEncodeConfig, optimizationMode: "detail" }, false);
+            this.localScreenVideoTrack = await KRTC.createScreenVideoTrack({ encoderConfig: videoEncodeConfig, optimizationMode: "detail" }, "disable");
             // this.localScreenVideoTrack =  await KRTC.createScreenVideoTrack({encoderConfig:videoEncodeConfig}, false);
             this.localScreenVideoTrack.on("track-ended", this.onTrackEnded);
+            this.addScreenDisplayElement();
         } else if (mediaType === "screenWithAudio") {
-            [this.localAudioTrack, this.localScreenVideoTrack] = await KRTC.createScreenVideoTrack({ encoderConfig: videoEncodeConfig }, true);
+            let tracks = await KRTC.createScreenVideoTrack({ encoderConfig: videoEncodeConfig }, "enable");
+            if (Array.isArray(tracks)) {
+                this.localScreenAudioTrack = tracks[0];
+                this.localScreenVideoTrack = tracks[1];
+                this.localScreenAudioTrack.on("track-ended", this.onTrackEnded);
+            } else {
+                this.localScreenVideoTrack = tracks;
+            }
             this.localScreenVideoTrack.on("track-ended", this.onTrackEnded);
+            this.addScreenDisplayElement();
+            this.openDeviceMutex.unlock();
+            return tracks;
         }
-        this.addScreenDisplayElement();
     } catch (error) {
         console.log(`${LogPrefix()} createScreenTrack error:${error}`);
+        this.openDeviceMutex.unlock();
+        throw error;
     }
+    this.openDeviceMutex.unlock();
 };
 
 AppController.prototype.hasElement = function (id) {
@@ -1200,5 +1371,65 @@ AppController.prototype.onSetRemoteVideoStreamTypeClicked = async function () {
     } catch (error) {
         this.writeAryaLog(`fail to set remote stream type because of error:${error}`);
         console.log(`${LogPrefix()} onSetRemoteStreamTypeClicked fail to set remote stream type error:${error}`);
+    }
+};
+
+AppController.prototype.onSetLiveTranscodingClicked = async function () {
+    console.log(`${LogPrefix()} onSetLiveTranscodingClicked transcodeing:${this.debugInfoText.value}`);
+    try {
+        let transcodeing = JSON.parse(this.debugInfoText.value);
+        await this.client.setLiveTranscoding(transcodeing);
+    } catch (error) {
+        console.log(`${LogPrefix()} onSetLiveTranscodingClicked error:${error}`);
+    }
+
+};
+
+AppController.prototype.onLiveStreamingClicked = async function () {
+    let rtmpUrl = this.streamUrlInput.value;
+    let enableTranscoding = this.transcodeCheckbox.checked;
+    try {
+        if (this.liveStreaming.innerHTML === "start live") {
+            this.liveStreaming.innerHTML = "stop live";
+            await this.client.startLiveStreaming(rtmpUrl, enableTranscoding);
+        } else {
+            this.liveStreaming.innerHTML = "start live";
+            await this.client.stopLiveStreaming(rtmpUrl);
+        }
+    } catch (error) {
+        console.log(`${LogPrefix()} onLiveStreamingClicked error:${error}`);
+    }
+};
+
+AppController.prototype.onMuteAudioClicked = function () {
+    let uid = this.remoteUserSelect.value;
+    console.log(`${LogPrefix()} onMuteAudio uid:${uid}`);
+    if (this.activeTrack) {
+        this.activeTrack.muteRemoteAudio(uid);
+    } else {
+        console.log(`${LogPrefix()} onMuteAudio active speaker is null`);
+    }
+};
+
+AppController.prototype.onUnmuteAudioClicked = function () {
+    let uid = this.remoteUserSelect.value;
+    console.log(`${LogPrefix()} onUnmuteAudio uid:${uid}`);
+    if (this.activeTrack) {
+        this.activeTrack.unmuteRemoteAudio(uid);
+    } else {
+        console.log(`${LogPrefix()} onUnmuteAudio active speaker is null`);
+    }
+};
+
+
+AppController.prototype.onVideoEncodeProfileChange = async function () {
+    let videoEncoderConfig = this.videoEncoderConfigs.get(this.videoConfigSelect.value);
+    console.log(`${LogPrefix()} profile:${this.videoConfigSelect.value} ${JSON.stringify(videoEncoderConfig)}}`);
+    if (this.localVideoTrack) {
+        try {
+            await this.localVideoTrack.setEncoderConfiguration(videoEncoderConfig);
+        } catch (error) {
+            console.log(`${LogPrefix()} profile:${this.videoConfigSelect.value} failed`);
+        }
     }
 };
