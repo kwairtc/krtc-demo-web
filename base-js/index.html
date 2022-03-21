@@ -5,12 +5,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>
-        2022-02-23 17:36:54.61
+        2022-03-21 16:47:19.575
     </title>
     <link rel="stylesheet" href="./index.css">
     <link rel="stylesheet" href="./modal.css">
     <link rel="stylesheet" href="css/iconfont.css">
-<script src="krtc-js-sdk.js?b57d7639f3e6f32de300"></script></head>
+<script src="krtc-js-sdk.js?d7d3507c4cb30a20df5f"></script></head>
 
 <body class="body">
     <div class="Container">
@@ -67,7 +67,10 @@
                             <input type="text" id="bitrateText" placeholder="bitrate"
                                 style="text-align:center; width:112px; margin-left: 5px;">
                         </div>
-                        <button id="dualStream" class="bigBut">enableDual</button>
+                        <div style="display: flex; flex-direction: row;">
+                            <button id="dualStream" class="bigBut">enableDual</button>
+                            <button id="setParam" class="bigBut" style="margin-left: 5px;">setParam</button>
+                        </div>
                         <div style="display: flex; flex-direction: row;">
                             <button id="setliveTranscoding" style="width: 150px;margin-bottom: 3px;">set live transcoding</button>
                         </div>
@@ -102,7 +105,7 @@
                     <button id="initEngine" class="customBut">init</button>
                     <button id="setting">setting</button>
                     <label style="width: 120px; font-size:14px">openApi</label>
-                    <input type="checkbox" id="openApi" checked>
+                    <input type="checkbox" id="openApi">
                     <label style="width: 120px; font-size:14px">activeTrack</label>
                     <input type="checkbox" id="activeTrack">
                 </div>
@@ -112,6 +115,8 @@
                     <input type="text" id="channelId" placeholder="channel id"
                         style="text-align:center; width:112px; margin-left:10px;font-size:14px">
                     <button id="roleConfirm" class="customBut" style="display: none;">confirm</button>
+                    <label style="width: 120px; font-size:14px">debugInfo</label>
+                    <input type="checkbox" id="debugInfoCheckBox">
                 </div>
                 <div style="margin-bottom: 5px;">
                     <button id="join" class="customBut">join</button>

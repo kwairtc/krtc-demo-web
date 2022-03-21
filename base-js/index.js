@@ -1,4 +1,5 @@
-// KRTC.enbaleLogDebug(false)
+// KRTC.enbaleLogDebug(false);
+// KRTC.setLogLevel(0);
 function getLocaltime() {
     return (new Date()).Format("yyyy-MM-dd hh:mm:ss.S");
 };
@@ -148,12 +149,16 @@ var AppController = function () {
     this.liveStreaming = document.getElementById("liveStreaming");
     this.transcodeCheckbox = document.getElementById("transcode");
 
+    this.setParamButton = document.getElementById("setParam");
+
     this.microphoneConfirmButton.onclick = this.onMicrophoneConfirmClicked.bind(this);
     this.cameraConfirmButton.onclick = this.onCameraConfirmClicked.bind(this);
     this.speackerConfirmButton.onclick = this.onSpeakerConfirmClicked.bind(this);
 
     this.setLiveTranscodingButton.onclick = this.onSetLiveTranscodingClicked.bind(this);
     this.liveStreaming.onclick = this.onLiveStreamingClicked.bind(this);
+
+    this.setParamButton.onclick = this.onSetParamClicked.bind(this);
 
     this.muteAudioButton.onclick = this.onMuteAudioClicked.bind(this);
     this.unmuteAudioButton.onclick = this.onUnmuteAudioClicked.bind(this);
@@ -224,6 +229,7 @@ var AppController = function () {
     this.defaultSubscribeCheckBox = document.getElementById("defaultSubscribe");
     this.openApiCheckBox = document.getElementById("openApi");
     this.activeTrackCheckBox = document.getElementById("activeTrack");
+    this.enableDebugInfoCheckbox = document.getElementById("debugInfoCheckBox");
 
     this.initEngineButton.onclick = this.onInitEngineClicked.bind(this);
     this.joinButton.onclick = this.onJoinClicked.bind(this);
@@ -247,7 +253,9 @@ var AppController = function () {
     this.onContentUnpublish = this.onContentUnpublish_.bind(this);
     this.onContentKickOff = this.onContentKickedOff_.bind(this);
     this.onTrackEnded = this.onTrackEnded_.bind(this);
+    this.onLocalScreenVideoTrackChanged = this.onLocalScreenVideoTrackChanged_.bind(this);
     this.onActiveTrack = this.onActiveTrack_.bind(this);
+    this.onNetworkQualityUpdate = this.onNetworkQualityUpdate_.bind(this);
     this.openDeviceMutex = new AWaitLock('openDevice');
     this.writeAryaLog(`init appcontroler done time:${document.getElementsByTagName("title")[0].innerHTML}`);
 };
@@ -453,6 +461,8 @@ AppController.prototype.onJoinClicked = function () {
     } else {
         this.client.disableOpenApi();
     }
+    this.uplinkNetworkQuality = 0;
+    this.downlinkNetworkQuality = 0;
     console.log(`${LogPrefix()} onJoinClicked, "userid:`, this.localUserIdInput.value, "channel id:", this.channelIdInput.value);
     if (this.localUserIdInput.value.length === 0 || this.channelIdInput.value.length === 0) {
         this.showToast(`invaild userId:${this.localUserIdInput.value} or channelId:${this.channelIdInput.value}`, 1000);
@@ -479,11 +489,13 @@ AppController.prototype.onJoinClicked = function () {
     this.client.on("content-published", this.onContentPublish);
     this.client.on("content-unpublished", this.onContentUnpublish);
     this.client.on("content-kicked-off", this.onContentKickOff);
+    this.client.on("network-quality", this.onNetworkQualityUpdate);
     this.client.join(this.options.appId, this.channelId, this.options.token, this.localUserId).then((uid) => {
         this.isJoined = true;
         this.writeAryaLog(`userId:${this.localUserId} join channel:${this.channelId} success`);
         this.showToast(`${this.localUserId} join channel:${this.channelId} success`, 1000);
     }).catch((err) => {
+        this.stop();
         this.writeAryaLog(`userId:${this.localUserId} join channel:${this.channelId} fail ${err}`);
         this.showToast(`${this.localUserId} join channel:${this.channelId} fail`, 1000);
     });
@@ -499,6 +511,27 @@ AppController.prototype.onJoinClicked = function () {
     //     } catch (error) {
     //     }
     // };
+    if (this.enableDebugInfoCheckbox.checked) {
+        this.debugInfoText.value = "";
+        this._updateDebugInfoInterval && window.clearInterval(this._updateDebugInfoInterval);
+        this._updateDebugInfoInterval = window.setInterval(this.updateDebugInfo.bind(this), 2E3);
+    }
+};
+
+AppController.prototype.updateDebugInfo = function() {
+    if (this.isJoined) {
+        this.debugInfoText.value = "";
+        if (this.uplinkNetworkQuality !== undefined || this.downlinkNetworkQuality !== undefined) {
+            let netQualityText = `local tx_score:${this.uplinkNetworkQuality} rx_score:${this.downlinkNetworkQuality}`;
+            this.writeDebugInfo(netQualityText);
+        }
+        let remoteNetQualitys = this.client.getRemoteNetworkQuality();
+        for (const [uid, netQuality] of Object.entries(remoteNetQualitys)) {
+            let netQualityText = `uid:${uid} tx_score:${netQuality.uplinkNetworkQuality} rx_score:${netQuality.downlinkNetworkQuality}`;
+            console.log(`${LogPrefix()} remote network ${netQualityText}`);
+            this.writeDebugInfo(netQualityText);
+        }
+    }
 };
 
 AppController.prototype.onLeaveClicked = async function () {
@@ -531,6 +564,7 @@ AppController.prototype.onConnectionStateChange_ = function (curState, revState,
     this.writeAryaLog(`onConnectionStateChange curState:${curState} revState:${revState} reason:${reason}`);
     if (curState === "disconnected" && reason === "uid_banned") {
         this.stop();
+        this.closeDevice();
         this.showToast(`${this.localUserId} is kicked out`, 1000);
     }
 };
@@ -634,10 +668,12 @@ AppController.prototype.onUnpublishClicked = function () {
         this.removeScreenDisplayElement();
         if (this.localScreenVideoTrack) {
             this.localScreenVideoTrack.off("track-ended", this.onTrackEnded);
+            this.localScreenVideoTrack.off("player-state-changed",this.onLocalScreenVideoTrackChanged)
             this.localScreenVideoTrack = null;
         }
         if (this.localScreenAudioTrack) {
             this.localScreenAudioTrack.off("track-ended", this.onTrackEnded);
+            this.localScreenVideoTrack.off("player-state-changed",this.onLocalScreenVideoTrackChanged)
             this.localScreenAudioTrack = null;
         }
     }
@@ -895,6 +931,9 @@ AppController.prototype.onUserPublished_ = function (user, mediaType) {
             } else {
                 this.addRemoteVideoTrack(track);
             }
+            track.on("player-state-changed",(event)=>{
+                console.log(`${LogPrefix()} player-state-changed uid:${user.uid}, mediaType:${mediaType} remotetrack player is ${event.state} because of ${event.reason}`);
+            })
         }).catch((error) => {
             this.writeAryaLog(`subscribe errror:${error}`);
         });
@@ -924,6 +963,9 @@ AppController.prototype.onUserUnpublish_ = function (user, mediaType) {
 AppController.prototype.onContentPublish_ = function (track, mediaType) {
     this.writeAryaLog(`onContentPublish user:${track.getUserId()} mediaType:${mediaType}`);
     console.log(`${LogPrefix()} onContentPublish userId`, track.getUserId(), " mediaType:", mediaType);
+    track.on("player-state-changed", (event)=>{
+        console.log(`${LogPrefix()} player-state-changed content mediaType:${mediaType} remotetrack player is ${event.state} because of ${event.reason}`);
+    })
     if (mediaType === "audio") {
         this.contentAudioTrack = track;
         this.contentAudioTrack.play();
@@ -968,6 +1010,7 @@ AppController.prototype.onTrackEnded_ = async function (mediaType, sourceType, t
             }
             this.removeScreenDisplayElement();
             this.localScreenVideoTrack.off("track-ended", this.onTrackEnded);
+            this.localScreenVideoTrack.off("player-state-changed",this.onLocalScreenVideoTrackChanged)
             this.localScreenVideoTrack.close();
             this.localScreenVideoTrack = null;
         }
@@ -984,6 +1027,9 @@ AppController.prototype.onTrackEnded_ = async function (mediaType, sourceType, t
         }
     }
 };
+AppController.prototype.onLocalScreenVideoTrackChanged_ =function(event){
+    console.log(`${LogPrefix()} "player-state-changed localScreenVideoTrack player is ${event.state} because of ${event.reason}`);
+}
 
 AppController.prototype.onActiveTrack_ = function (activeTrack) {
     console.log(`${LogPrefix()} onActiveTrack`, activeTrack);
@@ -1049,7 +1095,6 @@ AppController.prototype.addRemoteVideoTrack = function (videoTrack) {
         videoView.appendChild(remoteVideoElement);
 
         let fit = sourceType === "people" ? "cover" : "contain";
-        let controls = sourceType === "people" ? false : true;
         let remoteCamera = document.createElement("span");
         remoteCamera.id = "camera_" + idSuffix;
         remoteCamera.className = "iconfont icon-camera_opened overlayCamera";
@@ -1067,7 +1112,7 @@ AppController.prototype.addRemoteVideoTrack = function (videoTrack) {
                 remoteCamera.className = "iconfont icon-camera_opened overlayCamera";
                 if (remoteUser !== undefined) {
                     let videoTrack = sourceType === "people" ? remoteUser.videoTrack : remoteUser.contentVideoTrack;
-                    videoTrack && videoTrack.play(remoteVideoElement, { mirror: false, fit: fit, controls: controls });
+                    videoTrack && videoTrack.play(remoteVideoElement, { mirror: false, fit: fit });
                     this.writeAryaLog(`userId:${userId} switch videoTrack to play`);
                 }
             }
@@ -1075,7 +1120,7 @@ AppController.prototype.addRemoteVideoTrack = function (videoTrack) {
         videoView.appendChild(remoteCamera);
 
         try {
-            videoTrack.play(remoteVideoElement, { mirror: false, fit: fit, controls: controls });
+            videoTrack.play(remoteVideoElement, { mirror: false, fit: fit });
         } catch (error) {
             this.writeAryaLog(`play errror:${error}`);
         }
@@ -1193,6 +1238,10 @@ AppController.prototype.removeRemoteUserElement = function (uid) {
 };
 
 AppController.prototype.stop = function () {
+    this.isJoining = false;
+    this.uplinkNetworkQuality = 0;
+    this.downlinkNetworkQuality = 0;
+    this.debugInfoText.value = "";
     this.client.off("user-published", this.onUserPublished);
     this.client.off("user-unpublished", this.onUserUnpublish);
     this.client.off("user-joined", this.onUserJoined);
@@ -1201,12 +1250,7 @@ AppController.prototype.stop = function () {
     this.client.off("content-published", this.onContentPublish);
     this.client.off("content-unpublished", this.onContentUnpublish);
     this.client.off("active-track", this.onActiveTrack);
-    if (this.localAudioTrack && this.localAudioTrack.isPlaying) {
-        this.localAudioTrack.close();
-    }
-    if (this.localVideoTrack && this.localVideoTrack.isPlaying) {
-        this.localVideoTrack.close();
-    }
+    this.client.off("network-quality", this.onNetworkQualityUpdate);
     this.remoteUsers.forEach((user, userId) => {
         this.removeRemoteVideoTrack(userId, "people");
         this.removeRemoteVideoTrack(userId, "content");
@@ -1215,6 +1259,8 @@ AppController.prototype.stop = function () {
     this.remoteUsers.clear();
     this.isJoined = false;
     this.liveStreaming.innerHTML = "start live";
+    this._updateDebugInfoInterval && window.clearInterval(this._updateDebugInfoInterval);
+    this._updateDebugInfoInterval = null;
 };
 
 AppController.prototype.openDevice = async function () {
@@ -1239,7 +1285,7 @@ AppController.prototype.openDevice = async function () {
             if (this.beautySelect.value === "1") {
                 await this.localVideoTrack.setBeautyEffect(true);
             }
-            this.localVideoTrack.play(this.localVideoView, { mirror: true });
+            this.localVideoTrack.play(this.localVideoView, { mirror: false });
             this.localVideoTrack.setOptimizationMode('motion');
             this.beautySelect.removeAttribute('disabled');
         } else {
@@ -1258,6 +1304,12 @@ AppController.prototype.openDevice = async function () {
                 this.beautySelect.removeAttribute('disabled');
             }
         }
+        this.localVideoTrack.on("player-state-changed", (event)=>{
+            console.log(`${LogPrefix()} localVideo player player-state-changed is ${event.state} because of ${event.reason}`);
+        })
+        this.localAudioTrack.on("player-state-changed", (event)=>{
+            console.log(`${LogPrefix()} localAudio player player-state-changed is ${event.state} because of ${event.reason}`);
+        })
     } catch (error) {
         console.log(`${LogPrefix()} openDevice error`);
         this.openDeviceMutex.unlock();
@@ -1274,7 +1326,7 @@ AppController.prototype.createScreenTrack = async function () {
     let videoEncodeConfig = {
         width: 2560,
         height: 1440,
-        // frameRate: 15,
+        frameRate: 15,
         // bitrateMax: 2000,
         // bitrateMin: 600
     };
@@ -1284,6 +1336,7 @@ AppController.prototype.createScreenTrack = async function () {
             this.localScreenVideoTrack = await KRTC.createScreenVideoTrack({ encoderConfig: videoEncodeConfig, optimizationMode: "detail" }, "disable");
             // this.localScreenVideoTrack =  await KRTC.createScreenVideoTrack({encoderConfig:videoEncodeConfig}, false);
             this.localScreenVideoTrack.on("track-ended", this.onTrackEnded);
+            this.localScreenVideoTrack.on("player-state-changed",this.onLocalScreenVideoTrackChanged)
             this.addScreenDisplayElement();
         } else if (mediaType === "screenWithAudio") {
             let tracks = await KRTC.createScreenVideoTrack({ encoderConfig: videoEncodeConfig }, "enable");
@@ -1291,10 +1344,12 @@ AppController.prototype.createScreenTrack = async function () {
                 this.localScreenAudioTrack = tracks[0];
                 this.localScreenVideoTrack = tracks[1];
                 this.localScreenAudioTrack.on("track-ended", this.onTrackEnded);
+                this.localScreenVideoTrack.on("player-state-changed",this.onLocalScreenVideoTrackChanged)
             } else {
                 this.localScreenVideoTrack = tracks;
             }
             this.localScreenVideoTrack.on("track-ended", this.onTrackEnded);
+            this.localScreenVideoTrack.on("player-state-changed",this.onLocalScreenVideoTrackChanged)
             this.addScreenDisplayElement();
             this.openDeviceMutex.unlock();
             return tracks;
@@ -1316,8 +1371,9 @@ AppController.prototype.writeAryaLog = function (...text) {
     this.aryaLogText.scrollTop = this.aryaLogText.scrollHeight;
 };
 
-AppController.prototype.writeDebugInfo = function (info) {
-
+AppController.prototype.writeDebugInfo = function (...info) {
+    this.debugInfoText.value += `[${getLocaltime()}] ` + JSON.stringify(info) + '\n';
+    this.debugInfoText.scrollTop = this.debugInfoText.scrollHeight;
 };
 
 AppController.prototype.removeChilds = function (element) {
@@ -1385,6 +1441,27 @@ AppController.prototype.onSetLiveTranscodingClicked = async function () {
 
 };
 
+AppController.prototype.onSetParamClicked = function () {
+    console.log(`${LogPrefix()} onSetParamClicked transcodeing:${this.debugInfoText.value}`);
+    let a = {
+        "uplinkPacketLossMax":1000,
+        "uplinkPacketLossMin":30,
+        "downlinkPacketLossMax":1000,
+        "downlinkPacketLossMin":30,
+        "uplinkRttMax":650,
+        "uplinkRttMin":40,
+        "downlinkRttMax":1000,
+        "downlinkRttMin":50
+    }
+    try {
+        let param = JSON.parse(this.debugInfoText.value);
+        Object.assign(KRTC._getDebugParam(), param);
+        console.log(`·${LogPrefix()} onSetParamClicked debugParam:${ JSON.stringify(KRTC._getDebugParam())}`);
+    } catch (error) {
+        console.log(`${LogPrefix()} set param error:${error}`);
+    }
+}
+
 AppController.prototype.onLiveStreamingClicked = async function () {
     let rtmpUrl = this.streamUrlInput.value;
     let enableTranscoding = this.transcodeCheckbox.checked;
@@ -1432,4 +1509,11 @@ AppController.prototype.onVideoEncodeProfileChange = async function () {
             console.log(`${LogPrefix()} profile:${this.videoConfigSelect.value} failed`);
         }
     }
+};
+
+AppController.prototype.onNetworkQualityUpdate_ = function(state) {
+    console.log(`${LogPrefix()} local network quality rx：`,state.downlinkNetworkQuality);
+    console.log(`${LogPrefix()} local network quality tx：`,state.uplinkNetworkQuality);
+    this.downlinkNetworkQuality = state.downlinkNetworkQuality;
+    this.uplinkNetworkQuality = state.uplinkNetworkQuality;
 };
