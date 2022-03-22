@@ -12,5 +12,6 @@ yarn-lock.json
 *.ntvs*
 *.njsproj
 *.sln
+*.vscode
 
 .npmrc
