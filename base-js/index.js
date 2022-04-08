@@ -1081,7 +1081,7 @@ AppController.prototype.addRemoteVideoTrack = function (videoTrack) {
                 remoteMicrophone.className = "iconfont icon-microphone_closed overlayMicrophone";
                 if (remoteUser !== undefined) {
                     let audioTrack = sourceType === "people" ? remoteUser.audioTrack : remoteUser.contentAudioTrack;
-                    audioTrack && remoteUser.audioTrack.stop();
+                    audioTrack && audioTrack.stop();
                     this.writeAryaLog(`userId:${userId} switch audioTrack to stop`);
                 }
             }
@@ -1095,6 +1095,7 @@ AppController.prototype.addRemoteVideoTrack = function (videoTrack) {
         videoView.appendChild(remoteVideoElement);
 
         let fit = sourceType === "people" ? "cover" : "contain";
+        let controls = sourceType === "people" ? false : true;
         let remoteCamera = document.createElement("span");
         remoteCamera.id = "camera_" + idSuffix;
         remoteCamera.className = "iconfont icon-camera_opened overlayCamera";
@@ -1112,7 +1113,7 @@ AppController.prototype.addRemoteVideoTrack = function (videoTrack) {
                 remoteCamera.className = "iconfont icon-camera_opened overlayCamera";
                 if (remoteUser !== undefined) {
                     let videoTrack = sourceType === "people" ? remoteUser.videoTrack : remoteUser.contentVideoTrack;
-                    videoTrack && videoTrack.play(remoteVideoElement, { mirror: false, fit: fit });
+                    videoTrack && videoTrack.play(remoteVideoElement, { mirror: false, fit: fit, controls: controls });
                     this.writeAryaLog(`userId:${userId} switch videoTrack to play`);
                 }
             }
@@ -1120,7 +1121,7 @@ AppController.prototype.addRemoteVideoTrack = function (videoTrack) {
         videoView.appendChild(remoteCamera);
 
         try {
-            videoTrack.play(remoteVideoElement, { mirror: false, fit: fit });
+            videoTrack.play(remoteVideoElement, { mirror: false, fit: fit, controls: controls });
         } catch (error) {
             this.writeAryaLog(`play errror:${error}`);
         }
@@ -1285,7 +1286,7 @@ AppController.prototype.openDevice = async function () {
             if (this.beautySelect.value === "1") {
                 await this.localVideoTrack.setBeautyEffect(true);
             }
-            this.localVideoTrack.play(this.localVideoView, { mirror: false });
+            this.localVideoTrack.play(this.localVideoView, { mirror: false, controls:true });
             this.localVideoTrack.setOptimizationMode('motion');
             this.beautySelect.removeAttribute('disabled');
         } else {
