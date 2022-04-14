@@ -24,7 +24,7 @@ const LogPrefix = () => {
     return `[${getLocaltime()}] [AppController]`;
 };
 
-class AWaitLock {
+class WaitLock {
     constructor(name) {
         this.name = name;
         this.lockQueue = [];
@@ -256,7 +256,7 @@ var AppController = function () {
     this.onLocalScreenVideoTrackChanged = this.onLocalScreenVideoTrackChanged_.bind(this);
     this.onActiveTrack = this.onActiveTrack_.bind(this);
     this.onNetworkQualityUpdate = this.onNetworkQualityUpdate_.bind(this);
-    this.openDeviceMutex = new AWaitLock('openDevice');
+    this.openDeviceMutex = new WaitLock('openDevice');
     this.writeAryaLog(`init appcontroler done time:${document.getElementsByTagName("title")[0].innerHTML}`);
 };
 
@@ -381,7 +381,7 @@ AppController.prototype.onInitEngineClicked = async function () {
     this.client = KRTC.createClient({
         enableActiveTrack: this.activeTrackCheckBox.checked,
         codec: this.codecSel.value,
-        deviceId: deviceId
+        // deviceId: deviceId
     });
     // this.client.enableAudioVolumeIndicator();
     // this.client.on("volume-indicator", volumes => {
@@ -621,7 +621,22 @@ AppController.prototype.onPublishClicked = async function () {
     }
     this.client.publish(tracks).then(() => {
         this.writeAryaLog(`publish ${mediaType} track success`);
-    }).catch((error) => this.writeAryaLog(`publish ${mediaType} track fail err:${error}`));
+    }).catch((error) => {
+        this.writeAryaLog(`publish ${mediaType} track fail err:${error}`);
+        if (this.localScreenAudioTrack && (mediaType === "screen" || mediaType === "screenWithAudio")) {
+            this.localScreenAudioTrack.close();
+            this.localScreenAudioTrack.off("track-ended", this.onTrackEnded);
+            this.localScreenAudioTrack.off("player-state-changed",this.onLocalScreenVideoTrackChanged)
+            this.localScreenAudioTrack = null;
+        }
+        if (this.localScreenVideoTrack && (mediaType === "screen" || mediaType === "screenWithAudio")) {
+            this.localScreenVideoTrack.close();
+            this.removeScreenDisplayElement();
+            this.localScreenVideoTrack.off("track-ended", this.onTrackEnded);
+            this.localScreenVideoTrack.off("player-state-changed",this.onLocalScreenVideoTrackChanged)
+            this.localScreenVideoTrack = null;
+        }
+    });
 };
 
 AppController.prototype.onUnpublishClicked = function () {
@@ -673,7 +688,7 @@ AppController.prototype.onUnpublishClicked = function () {
         }
         if (this.localScreenAudioTrack) {
             this.localScreenAudioTrack.off("track-ended", this.onTrackEnded);
-            this.localScreenVideoTrack.off("player-state-changed",this.onLocalScreenVideoTrackChanged)
+            this.localScreenAudioTrack.off("player-state-changed",this.onLocalScreenVideoTrackChanged)
             this.localScreenAudioTrack = null;
         }
     }
