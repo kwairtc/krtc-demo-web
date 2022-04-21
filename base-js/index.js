@@ -106,8 +106,15 @@ var AppController = function () {
             frameRate: 15,
             bitrateMax: 1200,
             bitrateMin: 500
-        }]]
-    );
+        }],
+        ["1080p", {
+            width: 1920,
+            height: 1080,
+            frameRate: 15,
+            bitrateMax: 2000,
+            bitrateMin: 600
+        }]
+    ]);
     document.getElementById("confirmBtn").onclick = this.onChangeAppIdAndToken.bind(this);
     document.getElementById("resetBtn").onclick = this.onResetAppIdAndToken.bind(this);
 
@@ -117,6 +124,7 @@ var AppController = function () {
     this.remoteUserSelect = document.getElementById("remoteUserId");
     this.mediaTypeSelect = document.getElementById("mediaTypeSel");
     this.videoConfigSelect = document.getElementById("videoConfigSel");
+    this.videoProfileSelect = document.getElementById("videoProfile");
     this.deviceKindSelect = document.getElementById("deviceKindSel");
     this.roleSelect = document.getElementById("roleSel");
     this.streamTypeSel = document.getElementById("streamTypeSel");
@@ -383,6 +391,10 @@ AppController.prototype.onInitEngineClicked = async function () {
         codec: this.codecSel.value,
         // deviceId: deviceId
     });
+
+    let signalHost = document.getElementById('signalHost').value; // 内部测试
+    this.client._setSignalHost(signalHost);
+    
     // this.client.enableAudioVolumeIndicator();
     // this.client.on("volume-indicator", volumes => {
     //     volumes.forEach((volume, index) => {
@@ -1346,10 +1358,13 @@ AppController.prototype.createScreenTrack = async function () {
         // bitrateMax: 2000,
         // bitrateMin: 600
     };
+    let videoProfile = this.videoProfileSelect.value;
+
+    //encoderConfig is video config or preset
     try {
         let mediaType = this.mediaTypeSelect.value;
         if (mediaType === 'screen') {
-            this.localScreenVideoTrack = await KRTC.createScreenVideoTrack({ encoderConfig: videoEncodeConfig, optimizationMode: "detail" }, "disable");
+            this.localScreenVideoTrack = await KRTC.createScreenVideoTrack({ encoderConfig: videoProfile, optimizationMode: "detail" }, "disable");
             // this.localScreenVideoTrack =  await KRTC.createScreenVideoTrack({encoderConfig:videoEncodeConfig}, false);
             this.localScreenVideoTrack.on("track-ended", this.onTrackEnded);
             this.localScreenVideoTrack.on("player-state-changed",this.onLocalScreenVideoTrackChanged)

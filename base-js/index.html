@@ -5,12 +5,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>
-        2022-04-14 12:05:45.220
+        2022-04-21 16:46:04.751
     </title>
     <link rel="stylesheet" href="./index.css">
     <link rel="stylesheet" href="./modal.css">
     <link rel="stylesheet" href="css/iconfont.css">
-<script src="krtc-js-sdk.js?eca600b02f03508093eb"></script></head>
+<script src="krtc-js-sdk.js?513beed0e4cd177b578d"></script></head>
 
 <body class="body">
     <div class="Container">
@@ -56,10 +56,19 @@
                                 <option value="vga1">640x480 15fps 800kbps</option>
                                 <option value="qvga">320x240 15fps 200kbps</option>
                                 <option value="hd">1280x720 15fps 1200kbps</option>
+                                <option value="1080p">1920x1080 15fps 2000kbps</option>
                             </select>
                             <select name="" id="codecSel" style="width: 100px; margin-bottom: 3px; margin-left: 3px;">
                                 <option value="H264">H264</option>
                                 <option value="VP8">VP8</option>
+                            </select>
+                            <select name="" id="videoProfile" style="width: 100px; margin-bottom: 3px;">
+                                <option value="1440p">1440p</option>
+                                <option value="480p">480p</option>
+                                <option value="720p">720p</option>
+                                <option value="1080p">1080p</option>
+                                <option value="1080p_2">1080p_2</option>
+                                <option value="1080p_3">1080p_3</option>
                             </select>
                         </div>
                         <div style="display: flex; flex-direction: row;">
@@ -93,6 +102,7 @@
                     <input type="text" id="appId" placeholder="输入appId" style="width:300px;margin-right:10px;">
                     <label for="token">token:</label>
                     <input type="text" id="token" placeholder="输入token" style="width:300px; ">
+                    <input type="text" id="signalHost" placeholder="输入mock信令域名" style="width:100px; ">
                     <button id="confirmBtn" class="bigBut">确定</button>
                     <button id="resetBtn" class="bigBut">重置</button>
                 </div>
