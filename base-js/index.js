@@ -1349,6 +1349,7 @@ AppController.prototype.openDevice = async function () {
 AppController.prototype.createScreenTrack = async function () {
     await this.openDeviceMutex.lock();
     if (this.localScreenVideoTrack) {
+        this.openDeviceMutex.unlock();
         throw "screen track has been created";
     }
     let videoEncodeConfig = {
