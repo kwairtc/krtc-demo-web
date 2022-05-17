@@ -574,10 +574,12 @@ AppController.prototype.onLeaveClicked = async function () {
 
 AppController.prototype.onConnectionStateChange_ = function (curState, revState, reason) {
     this.writeAryaLog(`onConnectionStateChange curState:${curState} revState:${revState} reason:${reason}`);
-    if (curState === "disconnected" && reason === "uid_banned") {
+    if (curState === "disconnected") {
         this.stop();
         this.closeDevice();
-        this.showToast(`${this.localUserId} is kicked out`, 1000);
+        if (reason === "uid_banned") {
+            this.showToast(`${this.localUserId} is kicked out`, 1000);
+        }
     }
 };
 
@@ -631,6 +633,7 @@ AppController.prototype.onPublishClicked = async function () {
         this.writeAryaLog(`open devices failed error:${error}`);
         return;
     }
+   
     this.client.publish(tracks).then(() => {
         this.writeAryaLog(`publish ${mediaType} track success`);
     }).catch((error) => {
@@ -1468,7 +1471,7 @@ AppController.prototype.onSetLiveTranscodingClicked = async function () {
         let transcodeing = JSON.parse(this.debugInfoText.value);
         await this.client.setLiveTranscoding(transcodeing);
     } catch (error) {
-        console.log(`${LogPrefix()} onSetLiveTranscodingClicked error:${error}`);
+        console.error(`${LogPrefix()} onSetLiveTranscodingClicked error:${error}`);
     }
 
 };
