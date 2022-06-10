@@ -1314,7 +1314,11 @@ AppController.prototype.openDevice = async function () {
             [this.localAudioTrack, this.localVideoTrack] = await KRTC.createMicrophoneAndCameraTracks(audioConfig, videoConfig);
             // this.localAudioTrack.play();
             if (this.beautySelect.value === "1") {
-                await this.localVideoTrack.setBeautyEffect(true);
+                try{
+                    await this.localVideoTrack.setBeautyEffect(true);
+                }catch(error){
+                    this.writeAryaLog(`set beautyEffect error:${error}`);
+                }
             }
             this.localVideoTrack.play(this.localVideoView, { mirror: false, controls:true });
             this.localVideoTrack.setOptimizationMode('motion');
@@ -1328,7 +1332,11 @@ AppController.prototype.openDevice = async function () {
             if (this.localVideoTrack === null) {
                 this.localVideoTrack = await KRTC.createCameraVideoTrack(videoConfig);
                 if (this.beautySelect.value === "1") {
-                    await this.localVideoTrack.setBeautyEffect(true);
+                    try{
+                        await this.localVideoTrack.setBeautyEffect(true);
+                    }catch(error){
+                        this.writeAryaLog(`set beautyEffect error:${error}`);
+                    }
                 }
                 this.localVideoTrack.setOptimizationMode('motion');
                 this.localVideoTrack.play(this.localVideoView, { mirror: true });
@@ -1371,7 +1379,7 @@ AppController.prototype.createScreenTrack = async function () {
             this.localScreenVideoTrack = await KRTC.createScreenVideoTrack({ encoderConfig: videoProfile, optimizationMode: "detail" }, "disable");
             // this.localScreenVideoTrack =  await KRTC.createScreenVideoTrack({encoderConfig:videoEncodeConfig}, false);
             this.localScreenVideoTrack.on("track-ended", this.onTrackEnded);
-            this.localScreenVideoTrack.on("player-state-changed",this.onLocalScreenVideoTrackChanged)
+            this.localScreenVideoTrack.on("player-state-changed",this.onLocalScreenVideoTrackChanged);
             this.addScreenDisplayElement();
         } else if (mediaType === "screenWithAudio") {
             let tracks = await KRTC.createScreenVideoTrack({ encoderConfig: videoEncodeConfig }, "enable");
@@ -1379,12 +1387,12 @@ AppController.prototype.createScreenTrack = async function () {
                 this.localScreenAudioTrack = tracks[0];
                 this.localScreenVideoTrack = tracks[1];
                 this.localScreenAudioTrack.on("track-ended", this.onTrackEnded);
-                this.localScreenVideoTrack.on("player-state-changed",this.onLocalScreenVideoTrackChanged)
+                this.localScreenVideoTrack.on("player-state-changed",this.onLocalScreenVideoTrackChanged);
             } else {
                 this.localScreenVideoTrack = tracks;
             }
             this.localScreenVideoTrack.on("track-ended", this.onTrackEnded);
-            this.localScreenVideoTrack.on("player-state-changed",this.onLocalScreenVideoTrackChanged)
+            this.localScreenVideoTrack.on("player-state-changed",this.onLocalScreenVideoTrackChanged);
             this.addScreenDisplayElement();
             this.openDeviceMutex.unlock();
             return tracks;
